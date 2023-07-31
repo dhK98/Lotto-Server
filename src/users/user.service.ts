@@ -13,9 +13,27 @@ export class UserService {
         })
     }
 
+    async findUserWithId(id: string){
+        return await this.prisma.user.findUnique({
+            where: {id: id}
+        })
+    }
+
     async findUserWithEmail(email: string){
-        return this.prisma.user.findFirst({
+        return await this.prisma.user.findUnique({
             where: {email: email}
+        })
+    }
+
+    async findUserWithName(name: string){
+        return await this.prisma.user.findUnique({
+            where: {name: name}
+        })
+    }  
+
+    async findUserWithPhonenumber(phonenumber: string){
+        return await this.prisma.user.findUnique({
+            where: {phonenumber: phonenumber}
         })
     }
 }

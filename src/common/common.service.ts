@@ -29,10 +29,33 @@ export class CommonService {
     }
     
     validatePhoneNumber(phonenumber: string): boolean{
-        const phoneNumberFormat: RegExp = /^\d{11}$/;
-        console.log(phonenumber)
-        if(!phoneNumberFormat.test(phonenumber)){
+        const phonenumberRegex: RegExp = /^\d{11}$/;
+        if(!phonenumberRegex.test(phonenumber)){
             return false;
+        }
+        return true
+    }
+
+    validateEmail(email: string): boolean{
+        const emailRegex: RegExp = /^(?=.{1,254}$)(?=.{1,64}@)[-!#$%&'*+/0-9=?A-Z^_`a-z{|}~]+(\.[-!#$%&'*+/0-9=?A-Z^_`a-z{|}~]+)*@[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*$/;
+        if(!email || !emailRegex.test(email)){
+            return false;
+        }
+        return true;
+    }
+
+    validatePassword(password: string): boolean{
+        const passwordRegex: RegExp = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[$@$!%*#?&])[A-Za-z\d$@$!%*#?&]{8,}$/;
+        if(!password || !passwordRegex.test(password)){
+            return false;
+        }
+        return true;
+    }
+
+    validateName(name: string): boolean{
+        const nameRegex = /^[ㄱ-ㅎ가-힣a-zA-Z0-9]+$/;
+        if(!name || !nameRegex.test(name)){
+            return false
         }
         return true
     }

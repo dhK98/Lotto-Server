@@ -28,3 +28,12 @@
 #     "phonenumber":"01045099894",
 #     "authnumber":"123456"
 # }
+
+POST http://localhost:8080/auth/login
+Content-Type: application/json
+
+{
+    "email":"ehgusrlaeh@naver.com",
+    "password":"12Sqecd34!"
+}
+

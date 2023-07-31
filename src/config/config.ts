@@ -12,7 +12,10 @@ class Config {
   static smsAccess = String(process.env.NAVER_ACCESS);
   static smsSecret = String(process.env.NAVER_SECRET);
   static smsCallingNumber = String(process.env.NAVER_CALLING_NUMBER);
-  static jwtACCESS = String()
+  static jwtAccess = String(process.env.JWT_ACCESS);
+  static jwtRefresh = String(process.env.JWT_REFRESH);
+  static jwtAccessExpire = String(process.env.JWT_ACCESS_EXPIRE);
+  static jwtRefreshExpire = String(process.env.JWT_REFRESH_EXPIRE);
 }
 
 export default Config;

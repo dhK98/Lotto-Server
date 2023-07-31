@@ -27,6 +27,13 @@ export class AuthController {
     description: "email과 password를 이용하여 로그인"
   })
   async login(@Body() loginInfo: LoginUser): Promise<ResponseLoginDto>{
+    // validate password and email
+    if(!this.commonService.validateEmail(loginInfo.email)){
+      throw new BadRequestException("Email format is not valid.")
+    }
+    if(!this.commonService.validatePassword(loginInfo.password)){
+      throw new BadRequestException("Password format is not valid.")
+    }
     const storedUser = await this.userService.findUserWithEmail(loginInfo.email)
     if(!storedUser){
       throw new UnprocessableEntityException('not exist user');
@@ -36,8 +43,15 @@ export class AuthController {
     }
     // create jwt token
     const payload = {sub: storedUser.id};
-    const accessToken = await this.jwtService.signAsync(payload);
-    return new ResponseLoginDto(accessToken);
+    const accessToken = await this.jwtService.signAsync(payload,{
+      secret: Config.jwtAccess,
+      expiresIn: Config.jwtAccessExpire,
+    });
+    const refreshToken = await this.jwtService.signAsync(payload,{
+      secret: Config.jwtRefresh,
+      expiresIn: Config.jwtRefreshExpire,
+    })
+    return new ResponseLoginDto(accessToken,refreshToken,storedUser.name,storedUser.phonenumber);
   }
 
   @Post('/request')
@@ -91,7 +105,6 @@ export class AuthController {
     try {
       const key = this.redisService.makePhoneAuthenticationKey(auth.phonenumber);
       const value = await this.redisService.get(key);
-      console.log(auth.phonenumber)
       if(value !== auth.authnumber || value === null){
         return {message: false}
       } 

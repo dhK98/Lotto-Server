@@ -1,13 +1,7 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, PickType } from "@nestjs/swagger";
+import { User } from "src/users/entities/user.entity";
 
-export class PhoneAuth {
-    @ApiProperty({
-        type: String,
-        example: "01045099894",
-        description: "휴대폰 번호"
-    })
-    phonenumber: string;
-
+export class PhoneAuth extends PickType(User,["phonenumber"]) {
     @ApiProperty({
         type: String,
         example: "123456",
