@@ -12,7 +12,7 @@ export class CommonService {
     }
 
     async compareString(string1: String, string2: String){
-        return bcrypt.compare(string1,string2);
+        return await bcrypt.compare(string1,string2);
     }
 
     async create6DigitRandomnumber(){

@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, InternalServerErrorException, Post, UnprocessableEntityException } from '@nestjs/common';
+import { BadRequestException, Body, Controller, InternalServerErrorException, Post, Res, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import axios from 'axios';
 import { CommonService } from 'src/common/common.service';
@@ -12,6 +12,7 @@ import { LoginUser } from './dto/request-login.dto';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ResponseLoginDto } from './dto/response-login.dto';
 import { AuthStatus } from './enum/authStatus';
+import { Response } from 'express';
 
 
 @Controller('auth')
@@ -26,7 +27,7 @@ export class AuthController {
     summary: "로그인",
     description: "email과 password를 이용하여 로그인"
   })
-  async login(@Body() loginInfo: LoginUser): Promise<ResponseLoginDto>{
+  async login(@Body() loginInfo: LoginUser,@Res({ passthrough: true }) res:Response): Promise<ResponseLoginDto>{
     // validate password and email
     if(!this.commonService.validateEmail(loginInfo.email)){
       throw new BadRequestException("Email format is not valid.")
@@ -36,10 +37,10 @@ export class AuthController {
     }
     const storedUser = await this.userService.findUserWithEmail(loginInfo.email)
     if(!storedUser){
-      throw new UnprocessableEntityException('not exist user');
-    }
-    if(!this.commonService.compareString(loginInfo.password,storedUser.password)){
-      throw new UnprocessableEntityException('not equal password');
+      throw new UnauthorizedException('not exist user');
+    }    
+    if(!await this.commonService.compareString(loginInfo.password,storedUser.password)){
+      throw new UnauthorizedException('not equal password');
     }
     // create jwt token
     const payload = {sub: storedUser.id};
@@ -51,7 +52,8 @@ export class AuthController {
       secret: Config.jwtRefresh,
       expiresIn: Config.jwtRefreshExpire,
     })
-    return new ResponseLoginDto(accessToken,refreshToken,storedUser.name,storedUser.phonenumber);
+    res.setHeader('Set-Cookie', `refreshToken=${refreshToken}; path=/;`);
+    return new ResponseLoginDto(accessToken,storedUser.name,storedUser.phonenumber);
   }
 
   @Post('/request')

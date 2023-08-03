@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Post, UnprocessableEntityException } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, Post, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
 import { UserService } from './user.service';
 import { Prisma }  from '@prisma/client';
 import { CommonService } from 'src/common/common.service';
@@ -31,14 +31,13 @@ export class UserController {
         }
         const isExistPhonenumber = await this.userService.findUserWithPhonenumber(user.phonenumber);
         if(isExistPhonenumber !== null){
-            throw new UnprocessableEntityException("already exist phonenumber");
+            throw new ConflictException("already exist phonenumber");
         }
         const key = this.redisService.makePhoneAuthenticationKey(user.phonenumber);
         const isAuth = await this.redisService.get(key);
         if(isAuth === null || isAuth !== AuthStatus["completed"]){
-            throw new UnprocessableEntityException("Authentication is not completed");
+            throw new UnauthorizedException("Authentication is not completed");
         }
-        await this.redisService.del(key);
         if(!this.commonService.validateEmail(user.email)){
             throw new BadRequestException("Email format is not valid.")
         }
@@ -50,11 +49,11 @@ export class UserController {
         }
         const isExistEmail = await this.userService.findUserWithEmail(user.email);
         if(isExistEmail !== null){
-            throw new UnprocessableEntityException("already exist account")
+            throw new ConflictException("already exist account")
         }
         const isExistName = await this.userService.findUserWithName(user.name);
         if(isExistName !== null){
-            throw new UnprocessableEntityException("already exist name")
+            throw new ConflictException("already exist name")
         }
         // 4. Get encryption function of common service 
         const encryptionPassword = await this.commonService.encryptionString(user.password);
@@ -64,6 +63,7 @@ export class UserController {
         }
         // 5. Call createUser of userService
         const createdUSer = await this.userService.createUser(storeUser)
+        await this.redisService.del(key);
         return new ResponseUserDto(createdUSer);
     }
 }
