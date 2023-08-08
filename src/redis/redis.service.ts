@@ -25,8 +25,16 @@ export class RedisService {
         return await this.redis.del(key);
     }
 
-    makePhoneAuthenticationKey(phoneNumber:string){
-        return `auth_phone:${phoneNumber}`;
+    makeSignupAuthenticationKey(phonenumber:string){
+        return `signup_phone:${phonenumber}`;
+    }
+
+    makeFindEmailAuthenticationKey(phonenumber: string){
+        return `findemail_phone:${phonenumber}`;
+    }
+
+    makeFindPasswordAuthenticationKey(phonenumber: string){
+        return `findpassword_phone:${phonenumber}`;
     }
 
 }

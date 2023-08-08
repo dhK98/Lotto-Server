@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { User as UserModel } from './entities/user.entity';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UserService {
@@ -34,6 +35,13 @@ export class UserService {
     async findUserWithPhonenumber(phonenumber: string){
         return await this.prisma.user.findUnique({
             where: {phonenumber: phonenumber}
+        })
+    }
+
+    async updateUser(id:string,data:Prisma.UserUpdateInput){
+        return await this.prisma.user.update({
+            where: {id},
+            data: data,
         })
     }
 }

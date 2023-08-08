@@ -13,6 +13,7 @@ import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ResponseLoginDto } from './dto/response-login.dto';
 import { AuthStatus } from './enum/authStatus';
 import { Response } from 'express';
+import { AuthType } from './entities/authType';
 
 
 @Controller('auth')
@@ -89,7 +90,16 @@ export class AuthController {
     //   throw new InternalServerErrorException(`error: ${error}`)
     // })
     try {
-      const key = this.redisService.makePhoneAuthenticationKey(auth.phonenumber);
+      var key: string
+      if(auth.type === AuthType.SIGNUP){
+        key = this.redisService.makeSignupAuthenticationKey(auth.phonenumber);
+      } else if(auth.type === AuthType.FINDEMAIL){
+        key = this.redisService.makeFindEmailAuthenticationKey(auth.phonenumber);
+      } else if(auth.type === AuthType.FINDPASSWORD){
+        key = this.redisService.makeFindPasswordAuthenticationKey(auth.phonenumber);
+      } else {
+        throw new BadRequestException();
+      }
       await this.redisService.set5minute(key,randomNumber);
     } catch (error) {
       throw new InternalServerErrorException(`error: ${error}`);
@@ -105,7 +115,16 @@ export class AuthController {
   })
   async phoneAuthenticationCheck(@Body() auth: CheckPhoneAuthDto){
     try {
-      const key = this.redisService.makePhoneAuthenticationKey(auth.phonenumber);
+      var key: string
+      if(auth.type === AuthType.SIGNUP){
+        key = this.redisService.makeSignupAuthenticationKey(auth.phonenumber);
+      } else if(auth.type === AuthType.FINDPASSWORD){
+        key = this.redisService.makeFindPasswordAuthenticationKey(auth.phonenumber);
+      } else if(auth.type === AuthType.FINDEMAIL){
+        key = this.redisService.makeFindEmailAuthenticationKey(auth.phonenumber);
+      } else {
+        throw new BadRequestException();
+      }
       const value = await this.redisService.get(key);
       if(value !== auth.authnumber || value === null){
         return {message: false}

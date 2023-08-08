@@ -1,4 +1,4 @@
-import { BadRequestException, Body, ConflictException, Controller, Post, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, InternalServerErrorException, NotFoundException, Post, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
 import { UserService } from './user.service';
 import { Prisma }  from '@prisma/client';
 import { CommonService } from 'src/common/common.service';
@@ -7,6 +7,10 @@ import { ResponseUserDto } from './dto/response-user.dto';
 import { RedisService } from 'src/redis/redis.service';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthStatus } from 'src/auth/enum/authStatus';
+import { FindEmailDto } from './dto/find-email.dto';
+import { NotFoundError } from 'rxjs';
+import { ResponseEmailDto } from './dto/response-email.dto';
+import { FindPasswordDto } from './dto/find-password.dto';
 
 @Controller('user')
 @ApiTags('user')
@@ -33,7 +37,7 @@ export class UserController {
         if(isExistPhonenumber !== null){
             throw new ConflictException("already exist phonenumber");
         }
-        const key = this.redisService.makePhoneAuthenticationKey(user.phonenumber);
+        const key = this.redisService.makeSignupAuthenticationKey(user.phonenumber);
         const isAuth = await this.redisService.get(key);
         if(isAuth === null || isAuth !== AuthStatus["completed"]){
             throw new UnauthorizedException("Authentication is not completed");
@@ -65,5 +69,70 @@ export class UserController {
         const createdUSer = await this.userService.createUser(storeUser)
         await this.redisService.del(key);
         return new ResponseUserDto(createdUSer);
+    }
+
+    @ApiBody({type: FindEmailDto})
+    @ApiResponse({type: ResponseEmailDto})
+    @ApiOperation({
+        summary: "이메일 찾기",
+        description: "휴대폰 번호 인증 후, 이메일 조회"
+    })
+    @Post("/email")
+    async findEmailWithPhonenumber(@Body() user: FindEmailDto){
+        if (!user.phonenumber || !this.commonService.validatePhoneNumber(user.phonenumber)){
+            throw new BadRequestException("phone number format is not valid.")
+        }
+        const isExistPhonenumber = await this.userService.findUserWithPhonenumber(user.phonenumber);
+        if(isExistPhonenumber === null){
+            throw new NotFoundException("already exist phonenumber");
+        }
+        // 1. validate SMS auth
+        const key = this.redisService.makeFindEmailAuthenticationKey(user.phonenumber);
+        const isAuth = await this.redisService.get(key);
+        if(isAuth === null || isAuth!==AuthStatus["completed"]){
+            throw new  UnauthorizedException("this phonenumber isn`t get auth");
+        }
+        // 2. find email with phonenumber
+        const isSignedupedUser = await this.userService.findUserWithPhonenumber(user.phonenumber);
+        if(!isSignedupedUser){
+            throw new UnauthorizedException("no exist signedup user");
+        }
+        return new ResponseEmailDto(isSignedupedUser.email);
+    }
+    @ApiBody({type: FindPasswordDto})
+    @ApiOperation({
+        summary: "패스워드 변경",
+        description: "휴대폰 번호 인증 후, 패스워드 변경"
+    })
+    @Post("/password")
+    async updatePassword(@Body() user:FindPasswordDto){
+        if (!user.phonenumber || !this.commonService.validatePhoneNumber(user.phonenumber)){
+            throw new BadRequestException("phone number format is not valid.")
+        }
+        if(!this.commonService.validateEmail(user.email)){
+            throw new BadRequestException("Email format is not valid.")
+        }
+        if(!this.commonService.validatePassword(user.password)){
+            throw new BadRequestException("Password format is not valid.")
+        }
+        const key = this.redisService.makeFindPasswordAuthenticationKey(user.phonenumber);
+        const isAuth = await this.redisService.get(key);
+        if(isAuth === null || isAuth!==AuthStatus["completed"]){
+            throw new  UnauthorizedException("this phonenumber isn`t get auth");
+        }
+        const isExistUser = await this.userService.findUserWithPhonenumber(user.phonenumber);
+        if(!isExistUser){
+            throw new NotFoundException("no exist user");
+        }
+        if(isExistUser.email !== user.email){
+            throw new NotFoundException("not equal user info")
+        }
+        const encryptionPassword = await this.commonService.encryptionString(user.password);
+        try {
+            await this.userService.updateUser(isExistUser.id,{...isExistUser,password: encryptionPassword});
+        } catch (error) {
+            throw new InternalServerErrorException();
+        }
+        return {success: true};
     }
 }
