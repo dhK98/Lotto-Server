@@ -107,13 +107,16 @@ export class AuthController {
     return {message: true}
   }
 
-  @Post('check')
+  @Post('/check')
   @ApiBody({type: CheckPhoneAuthDto})
   @ApiOperation({
     summary: "휴대폰 인증번호 확인",
     description: "입력한 휴대폰 번호가 유효한지 확인 이후 해당 휴대폰 번호로 로그인 진행"
   })
   async phoneAuthenticationCheck(@Body() auth: CheckPhoneAuthDto){
+    if(!this.commonService.validatePhoneNumber(auth.phonenumber)){
+      throw new BadRequestException('phonenumber is not validate')
+    }
     try {
       var key: string
       if(auth.type === AuthType.SIGNUP){
@@ -126,6 +129,9 @@ export class AuthController {
         throw new BadRequestException();
       }
       const value = await this.redisService.get(key);
+      if (value === AuthStatus.completed){
+        throw new BadRequestException("no exist auth request")
+      }
       if(value !== auth.authnumber || value === null){
         return {message: false}
       } 
@@ -135,4 +141,5 @@ export class AuthController {
       throw new UnprocessableEntityException(`error: ${error}`)
     }
   }
+
 }

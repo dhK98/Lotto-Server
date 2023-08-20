@@ -8,7 +8,6 @@ import { RedisService } from 'src/redis/redis.service';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthStatus } from 'src/auth/enum/authStatus';
 import { FindEmailDto } from './dto/find-email.dto';
-import { NotFoundError } from 'rxjs';
 import { ResponseEmailDto } from './dto/response-email.dto';
 import { FindPasswordDto } from './dto/find-password.dto';
 
@@ -84,7 +83,7 @@ export class UserController {
         }
         const isExistPhonenumber = await this.userService.findUserWithPhonenumber(user.phonenumber);
         if(isExistPhonenumber === null){
-            throw new NotFoundException("already exist phonenumber");
+            throw new NotFoundException("no exist signedup user");
         }
         // 1. validate SMS auth
         const key = this.redisService.makeFindEmailAuthenticationKey(user.phonenumber);
@@ -93,11 +92,8 @@ export class UserController {
             throw new  UnauthorizedException("this phonenumber isn`t get auth");
         }
         // 2. find email with phonenumber
-        const isSignedupedUser = await this.userService.findUserWithPhonenumber(user.phonenumber);
-        if(!isSignedupedUser){
-            throw new UnauthorizedException("no exist signedup user");
-        }
-        return new ResponseEmailDto(isSignedupedUser.email);
+        await this.redisService.del(key);
+        return new ResponseEmailDto(isExistPhonenumber.email);
     }
     @ApiBody({type: FindPasswordDto})
     @ApiOperation({
@@ -125,7 +121,7 @@ export class UserController {
             throw new NotFoundException("no exist user");
         }
         if(isExistUser.email !== user.email){
-            throw new NotFoundException("not equal user info")
+            throw new NotFoundException("not equal user email")
         }
         const encryptionPassword = await this.commonService.encryptionString(user.password);
         try {
@@ -133,6 +129,7 @@ export class UserController {
         } catch (error) {
             throw new InternalServerErrorException();
         }
-        return {success: true};
+        await this.redisService.del(key);
+        return {message: true};
     }
 }
